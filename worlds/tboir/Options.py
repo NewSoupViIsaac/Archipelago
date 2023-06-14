@@ -1,5 +1,5 @@
 import typing
-from Options import Option, DefaultOnToggle, Toggle, Range, Choice, DeathLink, OptionDict
+from Options import Option, DefaultOnToggle, Toggle, Range, Choice, DeathLink, OptionDict, SpecialRange
 from ..tboir import default_weights, default_junk_items_weights, item_table
 from .Items import default_trap_items_weights
 
@@ -64,6 +64,60 @@ class NoteMarksRequireHardMode(Toggle):
     """If set on Note Marks are only considered complete if the run was on hard mode.
     Relevant for both full notes and note marks goal"""
     display_name = "Note marks require hard mode"
+
+
+class LogicMode(Toggle):
+    """In Logic Mode, locations are tied to areas.
+    This means you will have to venture further into any singular run to get the "later" locations.
+    You will not be asked to go far into the game until you receive enough items to beat the harder floors."""
+    display_name = "Logic Mode"
+
+
+class FurthestLocations(SpecialRange):
+    """Only relevant for Logic Mode.
+    This determines how far you have to go into the game to clear locations and send items.
+    You may still be required to go further than this to beat your goal.
+    The floors in brackets are only required if their specific mode is activated."""
+    display_name = "Furthest Locations"
+    range_start = 0
+    range_end = 3
+    special_range_names = {
+        "Depths, (Mausoleum)": 0,
+        "Womb, Corpse, (Blue Womb)": 1,
+        "Sheol, Cathedral": 2,
+        "Chest, Dark Room, (Void, Isaac's House)": 3
+    }
+
+
+class AlternatePath(Toggle):
+    """Requires you to go through the alternate path, starting with Downpour, for extra location checks."""
+    display_name = "Alternate Path"
+
+
+class ExtraBosses(Toggle):
+    """Only relevant for Logic Mode.
+    Adds defeating Boss Rush, Hush, Beast, Delirium, and Mega Satan, and Mother to the location pool.
+    The "Furthest Locations" and "Alternate Path" settings influence which bosses are added."""
+    display_name = "Extra Bosses"
+
+
+class ShopChecks(Toggle):
+    """Only relevant for Logic Mode.
+    Requires you to buy Shop items for additional location checks."""
+    display_name = "Shop Checks"
+
+
+class PlanetariumCheck(Toggle):
+    """Only relevant for Logic Mode.
+    Adds a single location check for finding a Planetarium."""
+    display_name = "Planetarium Check"
+
+
+class AngelDevilChecks(Toggle):
+    """Only relevant for Logic Mode.
+    Adds several location checks for finding items at Angel or Devil Rooms.
+    Note that it may be possible that you have to go to Angel Rooms for Key Pieces even if this setting is off."""
+    display_name = "Angel/Devil Room Checks"
 
 
 class ItemPickupStep(Range):
@@ -185,6 +239,13 @@ tobir_options: typing.Dict[str, type(Option)] = {
     "full_note_amount": FullNoteAmount,
     "note_marks_amount": NoteMarkAmount,
     "note_marks_require_hard_mode": NoteMarksRequireHardMode,
+    "logic_mode": LogicMode,
+    "furthest_locations": FurthestLocations,
+    "alternate_path": AlternatePath,
+    "extra_bosses": ExtraBosses,
+    "shop_checks": ShopChecks,
+    "planetarium_check": PlanetariumCheck,
+    "angel_devil_checks": AngelDevilChecks,
     "item_weights": ItemWeights,
     "custom_item_weights": CustomItemWeights,
     "junk_percentage": JunkPercentage,
