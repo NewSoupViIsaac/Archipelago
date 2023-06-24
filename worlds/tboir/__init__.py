@@ -50,6 +50,8 @@ class TheBindingOfIsaacRepentanceWorld(World):
     required_prog_item_factor: float = 0.6
 
     def generate_early(self) -> None:
+        self.logic_mode_items = []
+
         if self.multiworld.logic_mode[self.player]:
             populatable_regions = base_regions.copy()
 
@@ -88,6 +90,8 @@ class TheBindingOfIsaacRepentanceWorld(World):
             items = create_items_logic(
                 self.multiworld, self.player, self.locations, self.event_locations, self.unlock_items
             )
+
+            self.logic_mode_items = items
 
             self.multiworld.itempool += [self.create_item(item) for item in items]
             return
@@ -145,7 +149,8 @@ class TheBindingOfIsaacRepentanceWorld(World):
             "fullNoteAmount": self.multiworld.full_note_amount[self.player].value,
             "noteMarksAmount": self.multiworld.note_marks_amount[self.player].value,
             "noteMarkRequireHardMode": self.multiworld.note_marks_require_hard_mode[self.player].value,
-            "splitStartItems": self.multiworld.split_start_items[self.player].value
+            "splitStartItems": self.multiworld.split_start_items[self.player].value,
+            "logicModeItems": self.logic_mode_items
         }
 
     def create_item(self, name: str) -> Item:
