@@ -3,17 +3,15 @@ import math
 import string
 
 from .Items import TheBindingOfIsaacRepentanceItem, item_table, default_weights, default_junk_items_weights, \
-    default_trap_items_weights
-from .Locations import location_table, TheBindingOfIsaacRepentanceLocation, base_location_table, logic_mode_locations, \
-    unlock_related_locations
-from .Regions import base_regions, alt_path_regions, extra_boss_regions, shop_regions, planetarium_region, \
-    angel_devil_regions, level_3_regions, level_2_regions, level_1_regions
+    default_trap_items_weights, create_items_logic
+from .Locations import location_table, TheBindingOfIsaacRepentanceLocation, base_location_table, \
+    get_logic_mode_locations
+from .Regions import base_regions, level_3_regions, level_2_regions, level_1_regions, create_regions_logic
 from .Rules import set_rules
 from .Options import tobir_options
 
 from BaseClasses import Region, Entrance, Item, MultiWorld, Tutorial, ItemClassification, CollectionState
 from worlds.AutoWorld import World, WebWorld
-from .Utils import determine_enabled_bosses
 
 
 class TheBindingOfIsaacRepentanceWeb(WebWorld):
@@ -53,6 +51,21 @@ class TheBindingOfIsaacRepentanceWorld(World):
 
     def generate_early(self) -> None:
         if self.multiworld.logic_mode[self.player]:
+            populatable_regions = base_regions.copy()
+
+            if self.multiworld.furthest_locations[self.player] < 3:
+                populatable_regions = [r for r in populatable_regions if r not in level_3_regions]
+
+            if self.multiworld.furthest_locations[self.player] < 2:
+                populatable_regions = [r for r in populatable_regions if r not in level_2_regions]
+
+            if self.multiworld.furthest_locations[self.player] < 1:
+                populatable_regions = [r for r in populatable_regions if r not in level_1_regions]
+
+            self.locations, self.unlock_items, self.event_locations = get_logic_mode_locations(
+                self.multiworld, self.player, populatable_regions
+            )
+
             return
 
         if not self.multiworld.player_name[self.player].isalnum():
@@ -71,6 +84,14 @@ class TheBindingOfIsaacRepentanceWorld(World):
         self.junk_item_count = self.junk_item_count - self.trap_item_count
 
     def create_items(self):
+        if self.multiworld.logic_mode[self.player]:
+            items = create_items_logic(
+                self.multiworld, self.player, self.locations, self.event_locations, self.unlock_items
+            )
+
+            self.multiworld.itempool += [self.create_item(item) for item in items]
+            return
+
         # Generate item pool
         itempool = []
 
@@ -106,7 +127,8 @@ class TheBindingOfIsaacRepentanceWorld(World):
 
     def create_regions(self):
         if self.multiworld.logic_mode[self.player]:
-            self.create_regions_logic()
+            create_regions_logic(self.multiworld, self.player, self.locations, self.event_locations)
+            return
         create_regions(self.multiworld, self.player, int(self.multiworld.total_locations[self.player].value),
                        self.progression_item_count, self.required_prog_item_factor)
 
@@ -132,75 +154,10 @@ class TheBindingOfIsaacRepentanceWorld(World):
         return item
 
     def collect_item(self, state: "CollectionState", item: "Item", remove: bool = False):
-        if item.advancement and item.code:
+        if item.advancement and item.code and not self.multiworld.logic_mode[self.player]:
             return "Progression Item"
 
         return super(TheBindingOfIsaacRepentanceWorld, self).collect_item(state, item, remove)
-
-    def create_regions_logic(self):
-        populatable_regions = base_regions.copy()
-
-        if self.multiworld.alternate_path[self.player]:
-            populatable_regions.update(alt_path_regions)
-
-        if self.multiworld.extra_bosses[self.player]:
-            populatable_regions.update(extra_boss_regions)
-
-        if self.multiworld.shop_checks[self.player]:
-            populatable_regions.update(shop_regions)
-
-        if self.multiworld.planetarium_check[self.player]:
-            populatable_regions.update(planetarium_region)
-
-        if self.multiworld.angel_devil_checks[self.player]:
-            populatable_regions.update(angel_devil_regions)
-
-        if self.multiworld.furthest_locations[self.player] < 3:
-            populatable_regions -= level_3_regions
-
-        if self.multiworld.furthest_locations[self.player] < 2:
-            populatable_regions -= level_2_regions
-
-        if self.multiworld.furthest_locations[self.player] < 1:
-            populatable_regions -= level_1_regions
-
-        regions_to_locations = dict()
-
-        hard_required_bosses = determine_enabled_bosses(self.multiworld, self.player, hard_required=True)
-        direct_goal_only_bosses = determine_enabled_bosses(self.multiworld, self.player, goal_only=True)
-
-        total_locations = 0
-
-        for location, location_data in logic_mode_locations.items():
-            region = location_data[1]
-
-            regions_to_locations.setdefault(region, [])
-
-            associated_required_boss = False
-            if location in unlock_related_locations:
-                associated_required_boss = hard_required_bosses[unlock_related_locations[location][2]]
-
-            check_is_goal = False
-            if location in direct_goal_only_bosses:
-                check_is_goal = direct_goal_only_bosses[location]
-
-            if (region in populatable_regions or associated_required_boss) and not check_is_goal:
-                regions_to_locations[region].append(location)
-                total_locations += 1
-
-        for region, location_list in regions_to_locations.items():
-            new_region = create_region(self.multiworld, self.player, region, location_list, []),
-
-            self.multiworld.regions += [
-                new_region
-            ]
-
-        self.multiworld.total_locations[self.player] = total_locations
-        self.multiworld.required_locations[self.player] = min(
-            self.multiworld.required_locations[self.player].value, total_locations
-        )
-
-        return
 
 
 # generate locations based on player setting

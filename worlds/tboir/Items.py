@@ -1,9 +1,13 @@
-import typing
-from BaseClasses import Item, ItemClassification
+from typing import List, NamedTuple, Optional, Dict
+
+from typing_extensions import DefaultDict
+
+from BaseClasses import Item, ItemClassification, MultiWorld, Location
+from worlds.tboir.Locations import logic_mode_locations, logic_regular_locations
 
 
-class ItemData(typing.NamedTuple):
-    id: typing.Optional[int]
+class ItemData(NamedTuple):
+    id: Optional[int]
     classification: ItemClassification
 
     def is_progression(self):
@@ -43,6 +47,10 @@ trap_items = {
     "Wavy Cap Trap": ItemData(base_id + 777, ItemClassification.trap),
 }
 
+logic_items = {
+    "Dad's Note": ItemData(base_id + 1014, ItemClassification.progression),
+}
+
 # 78000 - 78???
 item_table = {
     # items (main)
@@ -78,7 +86,9 @@ item_table = {
     "Baby Shop Item": ItemData(base_id + 28, ItemClassification.progression),
     "Wooden Chest Item": ItemData(base_id + 29, ItemClassification.progression),
     "Rotten Beggar Item": ItemData(base_id + 30, ItemClassification.progression),
+    "Quality 4 Item": ItemData(base_id + 1000, ItemClassification.progression),
     **junk_items,
+    **logic_items,
     # all collectables -> for start inv
     "Sad Onion": ItemData(base_id + 40, ItemClassification.progression),
     "Inner Eye": ItemData(base_id + 41, ItemClassification.progression),
@@ -846,4 +856,53 @@ default_weights = {
     "Red Chest Item": 6,
 }
 
-lookup_id_to_name: typing.Dict[int, str] = {data.id: name for name, data in item_table.items() if data.id}
+lookup_id_to_name: Dict[int, str] = {data.id: name for name, data in item_table.items() if data.id}
+
+
+def create_items_logic(multiworld: MultiWorld, player: int,
+                       locations: List[str], event_locations: List[str], unlock_items: List[str]):
+    items = []
+
+    for location in locations:
+        if location in logic_regular_locations:
+            items.append(logic_regular_locations[location][2])
+
+    for item in unlock_items:
+        items.append(item)
+
+    importance_levels = DefaultDict(lambda: 100)
+    importance_levels.update({
+        "Boss Item": 50,
+        "Angel Deal Item": 5,
+        "Devil Deal Item": 4,
+        "Planetarium Item": 3,
+        "Shop Item": 2,
+        "Random Item": 1,
+        "Random Pickup": 0,
+    })
+
+    items.sort(key=lambda i: - importance_levels[i])
+
+    while len(items) > len(locations):
+        items.pop()
+
+    while len(items) < len(locations):
+        items.append("Random Pickup")
+
+    for event_location in event_locations:
+        multiworld.get_location(event_location[1], player).place_locked_item(
+            TheBindingOfIsaacRepentanceItem(event_location[1], ItemClassification.progression, None, player)
+        )
+
+    real_items = []
+
+    for item in items:
+        if item in item_table:
+            real_items.append(item)
+        else:
+            if item == "Random Item":
+                real_items.append(multiworld.per_slot_randoms[player].choices(
+                    list(default_weights.keys()), list(default_weights.values()), k=1)[0]
+                )
+
+    return real_items
