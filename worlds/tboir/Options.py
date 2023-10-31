@@ -1,7 +1,6 @@
 import typing
-from Options import Option, DefaultOnToggle, Toggle, Range, Choice, DeathLink, OptionDict, SpecialRange
-from ..tboir import default_weights, default_junk_items_weights, item_table
-from .Items import default_trap_items_weights
+from Options import Option, DefaultOnToggle, Toggle, Range, Choice, DeathLink, OptionDict, AssembleOptions, SpecialRange
+from .Items import default_trap_items_weights, default_weights, default_junk_items_weights, item_table
 
 
 class TotalLocations(Range):
@@ -21,7 +20,8 @@ class RequiredLocations(Range):
 
 
 class Goal(Choice):
-    """Goal to finish the run"""
+    """Goal to finish the run. Note that note marks and full notes do include the Cent Sign note mark as greed mode is
+    not supported yet. """
     display_name = "Goal"
     option_mom = 0
     option_moms_heart = 1
@@ -45,15 +45,15 @@ class Goal(Choice):
 
 
 class NoteMarkAmount(Range):
-    """Number of full marks needed to beat the game (if goal is note marks). """
+    """Number of note marks needed to beat the game (if goal is note marks). """
     display_name = "Full Note Amount"
     range_start = 1
-    range_end = 408
+    range_end = 374
     default = 20
 
 
 class FullNoteAmount(Range):
-    """Number of full notes needed to beat the game (if goal is full notes). """
+    """Number of full notes needed to beat the game (if goal is full notes).  """
     display_name = "Full Note Amount"
     range_start = 1
     range_end = 34
@@ -231,7 +231,7 @@ class SplitStartItems(Choice):
     option_on_furthest = 2
 
 
-tobir_options: typing.Dict[str, type(Option)] = {
+tobir_options: typing.Dict[str, AssembleOptions] = {
     "total_locations": TotalLocations,
     "required_locations": RequiredLocations,
     "item_pickup_step": ItemPickupStep,

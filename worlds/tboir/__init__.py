@@ -124,6 +124,8 @@ class TheBindingOfIsaacRepentanceWorld(World):
         # Convert itempool into real items
         itempool = list(map(lambda name: self.create_item(name), itempool))
 
+        print(len(itempool), self.progression_item_count, self.trap_item_count, self.junk_item_count)
+
         self.multiworld.itempool += itempool
 
     def set_rules(self):
@@ -192,9 +194,9 @@ def create_regions(world, player: int, total_locations: int, progression_item_co
         source_region = world.get_region(f"Run Section {i}", player)
         target_region = world.get_region(f"Run Section {i + 1}", player)
         connection = Entrance(player, f"From Section {i} To Section {i + 1}", source_region)
-        connection.access_rule = lambda state: state.has(f"Progression Item", player, round(i * (
-                (progression_item_count * required_prog_item_factor) / (
-                (2 - ((i - 1) / (num_of_sections - 1))) * num_of_sections))))
+        needed = round(i * ((progression_item_count * required_prog_item_factor) / (
+                (2 - ((i - 1) / (num_of_sections - 1))) * num_of_sections)))
+        connection.access_rule = lambda state, n=needed: state.has(f"Progression Item", player, n)
         source_region.exits.append(connection)
         connection.connect(target_region)
 
