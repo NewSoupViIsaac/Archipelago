@@ -1,7 +1,7 @@
-from typing import Dict, Callable, List
+from typing import Dict, Callable, List, Set
 from typing_extensions import DefaultDict
 
-from BaseClasses import MultiWorld, Region, CollectionState, Entrance
+from BaseClasses import Region, CollectionState, Entrance
 from worlds.AutoWorld import World
 
 from .Locations import logic_mode_locations, TheBindingOfIsaacRepentanceLocation
@@ -78,21 +78,33 @@ level_1_regions = {
 }
 
 
-def connect(source: Region, target: Region, player: int, condition: Callable[[CollectionState], bool]):
-    """
-    connect two regions and set the corresponding requirement
-    """
-
-    connection = Entrance(
-        player,
-        source.name + " to " + target.name,
-        source
-    )
-
-    connection.access_rule = condition
-
-    source.exits.append(connection)
-    connection.connect(target)
+def can_advance(player: int, i_boss: int, i_treasure: int, quality_four: bool = False, extras: Set[str] = frozenset()):
+    if quality_four:
+        if extras:
+            return lambda state: (
+                state.has("Boss Item", player, i_boss)
+                and state.has("Treasure Room Item", player, i_treasure)
+                and state.has("Quality 4 Item", player)
+                and all(state.has_any([extra, extra + " Acquired"], player) for extra in extras)
+            )
+        else:
+            return lambda state: (
+                    state.has("Boss Item", player, i_boss)
+                    and state.has("Treasure Room Item", player, i_treasure)
+                    and state.has("Quality 4 Item", player)
+            )
+    else:
+        if extras:
+            return lambda state: (
+                state.has("Boss Item", player, i_boss)
+                and state.has("Treasure Room Item", player, i_treasure)
+                and all(state.has_any([extra, extra + " Acquired"], player) for extra in extras)
+            )
+        else:
+            return lambda state: (
+                state.has("Boss Item", player, i_boss)
+                and state.has("Treasure Room Item", player, i_treasure)
+            )
 
 
 def connect_all_regions(world: World, regions: Dict[str, Region]):
@@ -100,235 +112,88 @@ def connect_all_regions(world: World, regions: Dict[str, Region]):
 
     # Meh
 
-    connect(
-        regions["Basement 1"], regions["Ultra Greed"], player,
-        lambda state: True
-    )
+    regions["Basement 1"].connect(regions["Ultra Greed"])
 
     # Regular Path Down
 
-    connect(
-        regions["Basement 1"], regions["Basement 2"], player,
-        lambda state: True
-    )
-    connect(
-        regions["Basement 2"], regions["Caves 1"], player,
-        lambda state: state.has("Boss Item", player, 2) and state.has("Treasure Room Item", player, 1)
-    )
-    connect(
-        regions["Caves 1"], regions["Caves 2"], player,
-        lambda state: state.has("Boss Item", player, 2) and state.has("Treasure Room Item", player, 1)
-    )
-    connect(
-        regions["Caves 2"], regions["Depths 1"], player,
-        lambda state: state.has("Boss Item", player, 4) and state.has("Treasure Room Item", player, 3)
-    )
-    connect(
-        regions["Depths 1"], regions["Depths 2"], player,
-        lambda state: state.has("Boss Item", player, 4) and state.has("Treasure Room Item", player, 3)
-    )
-    connect(
-        regions["Depths 2"], regions["Womb 1"], player,
-        lambda state: state.has("Boss Item", player, 5) and state.has("Treasure Room Item", player, 5)
-    )
-    connect(
-        regions["Womb 1"], regions["Womb 2"], player,
-        lambda state: state.has("Boss Item", player, 5) and state.has("Treasure Room Item", player, 5)
-    )
-    connect(
-        regions["Womb 2"], regions["Sheol"], player,
-        lambda state: state.has("Boss Item", player, 6) and state.has("Treasure Room Item", player, 5)
-    )
-    connect(
-        regions["Womb 2"], regions["Cathedral"], player,
-        lambda state: state.has("Boss Item", player, 6) and state.has("Treasure Room Item", player, 5)
-    )
-    connect(
-        regions["Cathedral"], regions["Chest"], player,
-        lambda state: state.has("Boss Item", player, 6) and state.has("Treasure Room Item", player, 5)
-        and state.has("Quality 4 Item", player, 1)
-        and (state.has("Polaroid", player, 1) or state.has("Polaroid Acquired", player, 1))
-    )
-    connect(
-        regions["Sheol"], regions["Dark Room"], player,
-        lambda state: state.has("Boss Item", player, 6) and state.has("Treasure Room Item", player, 5)
-        and state.has("Quality 4 Item", player, 1)
-        and (state.has("Negative", player, 1) or state.has("Negative Acquired", player, 1))
-    )
+    regions["Basement 1"].connect(regions["Basement 2"])
+    regions["Basement 2"].connect(regions["Caves 1"], rule=can_advance(player, 2, 1))
+    regions["Caves 1"].connect(regions["Caves 2"], rule=can_advance(player, 2, 1))
+    regions["Caves 2"].connect(regions["Depths 1"], rule=can_advance(player, 4, 3))
+    regions["Depths 1"].connect(regions["Depths 2"], rule=can_advance(player, 4, 3))
+    regions["Depths 2"].connect(regions["Womb 1"], rule=can_advance(player, 5, 5))
+    regions["Womb 1"].connect(regions["Womb 2"], rule=can_advance(player, 5, 5))
+    regions["Womb 2"].connect(regions["Sheol"], rule=can_advance(player, 6, 5))
+    regions["Womb 2"].connect(regions["Cathedral"], rule=can_advance(player, 6, 5))
+
+    regions["Cathedral"].connect(regions["Chest"], rule=can_advance(player, 6, 5, True, {"Polaroid"}))
+    regions["Sheol"].connect(regions["Dark Room"], rule=can_advance(player, 6, 5, True, {"Negative"}))
 
     # Alt Path
 
-    connect(
-        regions["Basement 1"], regions["Downpour 1"], player,
-        lambda state: state.has("Boss Item", player, 1) and state.has("Treasure Room Item", player, 1)
+    regions["Basement 1"].connect(regions["Downpour 1"], rule=can_advance(player, 1, 1))
+    regions["Basement 2"].connect(regions["Downpour 2"], rule=can_advance(player, 1, 1))
+    regions["Caves 1"].connect(regions["Mines 1"], rule=can_advance(player, 3, 2))
+    regions["Caves 2"].connect(regions["Mines 2"], rule=can_advance(player, 3, 2))
+    regions["Depths 1"].connect(regions["Mausoleum 1"], rule=can_advance(player, 5, 4))
+
+    regions["Downpour 1"].connect(regions["Downpour 2"], rule=can_advance(player, 1, 1))
+    regions["Downpour 2"].connect(regions["Mines 1"], rule=can_advance(player, 3, 2))
+    regions["Mines 1"].connect(regions["Mines 2"], rule=can_advance(player, 3, 2))
+    regions["Mines 2"].connect(regions["Mausoleum 1"], rule=can_advance(player, 5, 4))
+    regions["Mausoleum 1"].connect(regions["Mausoleum 2"], rule=can_advance(player, 5, 4))
+    regions["Mausoleum 2"].connect(
+        regions["Alternate Mom's Heart"],
+        rule=can_advance(player, 5, 4, extras={"Knife Piece 1", "Knife Piece 2"})
     )
-    connect(
-        regions["Downpour 1"], regions["Downpour 2"], player,
-        lambda state: state.has("Boss Item", player, 1) and state.has("Treasure Room Item", player, 1)
-    )
-    connect(
-        regions["Basement 2"], regions["Downpour 2"], player,
-        lambda state: state.has("Boss Item", player, 1) and state.has("Treasure Room Item", player, 1)
-    )
-    connect(
-        regions["Downpour 2"], regions["Mines 1"], player,
-        lambda state: state.has("Boss Item", player, 3) and state.has("Treasure Room Item", player, 2)
-    )
-    connect(
-        regions["Caves 1"], regions["Mines 1"], player,
-        lambda state: state.has("Boss Item", player, 3) and state.has("Treasure Room Item", player, 2)
-    )
-    connect(
-        regions["Mines 1"], regions["Mines 2"], player,
-        lambda state: state.has("Boss Item", player, 3) and state.has("Treasure Room Item", player, 2)
-    )
-    connect(
-        regions["Caves 2"], regions["Mines 2"], player,
-        lambda state: state.has("Boss Item", player, 3) and state.has("Treasure Room Item", player, 2)
-    )
-    connect(
-        regions["Mines 2"], regions["Mausoleum 1"], player,
-        lambda state: state.has("Boss Item", player, 5) and state.has("Treasure Room Item", player, 4)
-    )
-    connect(
-        regions["Depths 1"], regions["Mausoleum 1"], player,
-        lambda state: state.has("Boss Item", player, 5) and state.has("Treasure Room Item", player, 4)
-    )
-    connect(
-        regions["Mausoleum 1"], regions["Mausoleum 2"], player,
-        lambda state: state.has("Boss Item", player, 5) and state.has("Treasure Room Item", player, 4)
-    )
-    connect(
-        regions["Mausoleum 2"], regions["Alternate Mom's Heart"], player,
-        lambda state: state.has("Knife Piece 1", player) and state.has("Knife Piece 2", player)
-        or state.has("Knife Piece 1 Acquired", player) and state.has("Knife Piece 2 Acquired", player)
-    )
-    connect(
-        regions["Alternate Mom's Heart"], regions["Corpse 1"], player,
-        lambda state: state.has("Boss Item", player, 6) and state.has("Treasure Room Item", player, 5)
-    )
-    connect(
-        regions["Corpse 1"], regions["Corpse 2"], player,
-        lambda state: state.has("Boss Item", player, 6) and state.has("Treasure Room Item", player, 5)
-    )
+    regions["Alternate Mom's Heart"].connect(regions["Corpse 1"], rule=can_advance(player, 6, 5))
+    regions["Corpse 1"].connect(regions["Corpse 2"], rule=can_advance(player, 6, 5))
 
     # Alt Bosses
 
-    connect(
-        regions["Depths 2"], regions["Boss Rush"], player,
-        lambda state: state.has("Boss Item", player, 5) and state.has("Treasure Room Item", player, 4)
-    )
+    regions["Depths 2"].connect(regions["Boss Rush"], rule=can_advance(player, 5, 4))
+    regions["Womb 2"].connect(regions["Blue Womb"], rule=can_advance(player, 6, 5))
+    regions["Blue Womb"].connect(regions["Void"], rule=can_advance(player, 6, 5, True))
 
-    connect(
-        regions["Womb 2"], regions["Blue Womb"], player,
-        lambda state: state.has("Boss Item", player, 6) and state.has("Treasure Room Item", player, 5)
-    )
-
-    connect(
-        regions["Blue Womb"], regions["Void"], player,
-        lambda state: state.has("Boss Item", player, 6) and state.has("Treasure Room Item", player, 5)
-        and state.has("Quality 4 Item", player, 1)
-    )
-
-    connect(
-        regions["Depths 2"], regions["Alternate Mausoleum 2"], player,
-        lambda state: (state.has("Polaroid", player) or state.has("Negative", player)
-                       or state.has("Polaroid Acquired", player) or state.has("Negative Acquired", player))
+    regions["Depths 2"].connect(regions["Alternate Mausoleum 2"], rule=lambda state: (
+        state.has_any(["Polaroid", "Polaroid Acquired", "Negative", "Negative Acquired"], player)
         and state.has("Boss Item", player, 5) and state.has("Treasure Room Item", player, 4)
+    ))
+
+    regions["Alternate Mausoleum 2"].connect(
+        regions["Home"], rule=can_advance(player, 6, 5, True, {"Dad's Note"})
     )
 
-    connect(
-        regions["Alternate Mausoleum 2"], regions["Home"], player,
-        lambda state: state.has("Dad's Note", player) or state.has("Dad's Note Acquired", player)
-    )
+    regions["Home"].connect(regions["Beast"], rule=can_advance(player, 6, 5, True))
 
-    connect(
-        regions["Alternate Mausoleum 2"], regions["Home"], player,
-        lambda state: state.has("Boss Item", player, 6) and state.has("Treasure Room Item", player, 5)
-        and state.has("Quality 4 Item", player, 1)
-    )
+    regions["Dark Room"].connect(regions["Mega Satan"], rule=lambda state: (
+        state.has_any(["Key Piece 1", "Key Piece 1 Acquired"], player)
+        and state.has_any(["Key Piece 2", "Key Piece 2 Acquired"], player)
+    ))
 
-    connect(
-        regions["Home"], regions["Beast"], player,
-        lambda state: state.has("Boss Item", player, 6) and state.has("Treasure Room Item", player, 5)
-        and state.has("Quality 4 Item", player, 1)
-    )
-
-    connect(
-        regions["Dark Room"], regions["Mega Satan"], player,
-        lambda state: state.has("Key Piece 1", player) and state.has("Key Piece 2", player)
-        or state.has("Key Piece 1 Acquired", player) and state.has("Key Piece 2 Acquired", player)
-    )
-
-    connect(
-        regions["Chest"], regions["Mega Satan"], player,
-        lambda state: state.has("Key Piece 1", player) and state.has("Key Piece 2", player)
-        or state.has("Key Piece 1 Acquired", player) and state.has("Key Piece 2 Acquired", player)
-    )
+    regions["Chest"].connect(regions["Mega Satan"], rule=lambda state: (
+        state.has_any(["Key Piece 1", "Key Piece 1 Acquired"], player)
+        and state.has_any(["Key Piece 2", "Key Piece 2 Acquired"], player)
+    ))
 
     # Angel/Devil
 
-    connect(
-        regions["Basement 2"], regions["Devil Room 1"], player,
-        lambda state: True
-    )
+    regions["Basement 2"].connect(regions["Devil Room 1"])
+    regions["Depths 1"].connect(regions["Devil Room 2"])
+    regions["Depths 1"].connect(regions["Angel Room 1"])
+    regions["Womb 1"].connect(regions["Angel Room 2"])
 
-    connect(
-        regions["Depths 1"], regions["Devil Room 2"], player,
-        lambda state: True
-    )
-
-    connect(
-        regions["Depths 1"], regions["Angel Room 1"], player,
-        lambda state: True
-    )
-
-    connect(
-        regions["Womb 1"], regions["Angel Room 2"], player,
-        lambda state: True
-    )
-
-    connect(
-        regions["Angel Room 1"], regions["Key Piece 1"], player,
-        lambda state: True
-    )
-
-    connect(
-        regions["Angel Room 2"], regions["Key Piece 2"], player,
-        lambda state: True
-    )
+    regions["Angel Room 1"].connect(regions["Key Piece 1"])
+    regions["Angel Room 2"].connect(regions["Key Piece 2"])
 
     # Shops/Planetarium
 
-    connect(
-        regions["Basement 2"], regions["Shop 1"], player,
-        lambda state: True
-    )
-
-    connect(
-        regions["Caves 1"], regions["Shop 2"], player,
-        lambda state: True
-    )
-
-    connect(
-        regions["Caves 2"], regions["Shop 3"], player,
-        lambda state: True
-    )
-
-    connect(
-        regions["Depths 1"], regions["Shop 4"], player,
-        lambda state: True
-    )
-
-    connect(
-        regions["Depths 2"], regions["Shop 5"], player,
-        lambda state: True
-    )
-
-    connect(
-        regions["Depths 2"], regions["Planetarium"], player,
-        lambda state: True
-    )
+    regions["Basement 2"].connect(regions["Shop 1"])
+    regions["Caves 1"].connect(regions["Shop 2"])
+    regions["Caves 2"].connect(regions["Shop 3"])
+    regions["Depths 1"].connect(regions["Shop 4"])
+    regions["Depths 2"].connect(regions["Shop 5"])
+    regions["Depths 2"].connect(regions["Planetarium"])
 
 
 def create_regions_logic(world: World, locations: List[str], event_locations: List[str]):
@@ -347,15 +212,11 @@ def create_regions_logic(world: World, locations: List[str], event_locations: Li
         regions_by_name[region_name] = new_region
 
     starting_region = create_region(world.multiworld, world.player, "Menu", None)
-
-    starting_entrance = Entrance(world.player, "New Run", starting_region)
-    starting_entrance.connect(regions_by_name["Basement 1"])
+    starting_region.connect(regions_by_name["Basement 1"], "New Run")
 
     world.multiworld.regions += [
         starting_region
     ]
-
-    starting_region.exits.append(starting_entrance)
 
     connect_all_regions(world, regions_by_name)
 
