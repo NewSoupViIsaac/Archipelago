@@ -90,7 +90,8 @@ class FurthestLocations(SpecialRange):
 
 
 class AlternatePath(Toggle):
-    """Requires you to go through the alternate path, starting with Downpour, for extra location checks."""
+    """Only relevant for Logic Mode.
+    Requires you to go through the alternate path, starting with Downpour, for extra location checks."""
     display_name = "Alternate Path"
 
 
