@@ -247,7 +247,7 @@ def get_logic_mode_locations(world: World, populatable_regions: Set[str]):
             locations.remove(boss)
 
     for unlock_item in event_unlocks:
-        if unlock_item not in unlock_items and not (unlock_item in {"Polaroid", "Negative"} and either_photo_in):
+        if unlock_item not in unlock_items:
             event_locations.add((unlock_item, unlock_item + " Acquired"))
 
     for boss, enabled in required_bosses.items():
