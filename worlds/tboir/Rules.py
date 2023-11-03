@@ -45,7 +45,7 @@ def beats_bosses(multiworld: MultiWorld, player: int, bosses: Dict[str, bool]) -
 
 def set_rules(world: MultiWorld, player: int, progression_item_count: int, required_prog_item_factor: float):
     if world.logic_mode[player]:
-        required_bosses = determine_enabled_bosses(world, player)
+        required_bosses = determine_enabled_bosses(world.worlds[player])
         world.completion_condition[player] = beats_bosses(world, player, required_bosses)
 
         rules_lookup = get_rules_lookup(player)

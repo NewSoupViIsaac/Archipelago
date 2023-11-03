@@ -1,7 +1,7 @@
 from typing import Set, Dict
-from BaseClasses import Location, MultiWorld
+from BaseClasses import Location
 from worlds.tboir.Utils import determine_enabled_bosses
-
+from worlds.AutoWorld import World
 
 class TheBindingOfIsaacRepentanceLocation(Location):
     game: str = "The Binding of Isaac Rebirth"
@@ -66,7 +66,7 @@ logic_regular_locations = {
     "Mega Satan": (base_id + 1085, "Mega Satan", "Random Item"),
     "Alternate Mom": (base_id + 1086, "Mausoleum 2", "Random Item"),
     "Alternate Mom's Heart": (base_id + 1087, "Alternate Mom's Heart", "Random Item"),
-    "Ultra Greed": (base_id + 1088, "Ultra Greed", "Random Item"),
+    # "Ultra Greed": (base_id + 1088, "Ultra Greed", "Random Item"),
 
     "Angel Deal Item 1": (base_id + 1100, "Angel Room 1", "Angel Deal Item"),
     "Angel Deal Item 2": (base_id + 1101, "Angel Room 2", "Angel Deal Item"),
@@ -104,7 +104,7 @@ location_table = {
 lookup_id_to_name: Dict[int, str] = {id: name for name, id in location_table.items()}
 
 
-def get_logic_mode_locations(multiworld: MultiWorld, player: int, populatable_regions: Set[str]):
+def get_logic_mode_locations(world: World, populatable_regions: Set[str]):
     unlock_items = set()
     event_locations = set()
 
@@ -130,7 +130,7 @@ def get_logic_mode_locations(multiworld: MultiWorld, player: int, populatable_re
         "Blue Baby",
     }
 
-    if multiworld.alternate_path[player]:
+    if world.options.alternate_path:
         locations |= {
             "Downpour 1 Treasure Room",
             "Downpour 2 Treasure Room",
@@ -151,7 +151,7 @@ def get_logic_mode_locations(multiworld: MultiWorld, player: int, populatable_re
             "Mother",
         }
 
-    if multiworld.extra_bosses[player]:
+    if world.options.extra_bosses:
         locations |= {
             "Boss Rush",
             "Hush",
@@ -167,7 +167,7 @@ def get_logic_mode_locations(multiworld: MultiWorld, player: int, populatable_re
             "Mother",
         }
 
-    if multiworld.shop_checks[player]:
+    if world.options.shop_checks:
         locations |= {
             "Shop Item 1",
             "Shop Item 2",
@@ -176,12 +176,12 @@ def get_logic_mode_locations(multiworld: MultiWorld, player: int, populatable_re
             "Shop Item 5",
         }
 
-    if multiworld.planetarium_check[player]:
+    if world.options.planetarium_check:
         locations |= {
             "Planetarium Item",
         }
 
-    if multiworld.angel_devil_checks[player]:
+    if world.options.angel_devil_checks:
         locations |= {
             "Angel Deal Item 1",
             "Angel Deal Item 2",
@@ -189,47 +189,60 @@ def get_logic_mode_locations(multiworld: MultiWorld, player: int, populatable_re
             "Devil Deal Item 2",
         }
 
-    direct_goal_only_bosses = determine_enabled_bosses(multiworld, player, goal_only=True)
+    direct_goal_only_bosses = determine_enabled_bosses(world, goal_only=True)
+    required_bosses = determine_enabled_bosses(world)
 
     locations = {location for location in locations if logic_mode_locations[location][1] in populatable_regions}
+
+    event_unlocks = set()
 
     if "Mother" in locations:
         locations.add("Knife Piece 1")
         locations.add("Knife Piece 2")
         unlock_items.add("Knife Piece 1")
         unlock_items.add("Knife Piece 2")
+    elif required_bosses["Mother"]:
+        event_unlocks.add("Knife Piece 1")
+        event_unlocks.add("Knife Piece 2")
 
     if "Beast" in locations or "Dogma" in locations:
         locations.add("Dad's Note")
         unlock_items.add("Dad's Note")
         unlock_items.add("Polaroid")
+    elif required_bosses["Beast"] or required_bosses["Dogma"]:
+        event_unlocks.add("Dad's Note")
+        event_unlocks.add("Polaroid")
 
     if "Blue Baby" in locations:
         unlock_items.add("Polaroid")
+    elif required_bosses["Blue Baby"]:
+        event_unlocks.add("Polaroid")
 
     if "Lamb" in locations:
         unlock_items.add("Negative")
+    elif required_bosses["Lamb"]:
+        event_unlocks.add("Negative")
 
     if "Mega Satan" in locations:
         locations.add("Key Piece 1")
         locations.add("Key Piece 2")
         unlock_items.add("Key Piece 1")
         unlock_items.add("Key Piece 2")
+    elif required_bosses["Mega Satan"]:
+        event_unlocks.add("Key Piece 1")
+        event_unlocks.add("Key Piece 2")
 
     for boss in (boss for boss, enabled in direct_goal_only_bosses.items() if enabled):
         if boss in locations:
             locations.remove(boss)
 
-    all_unlocks = {
-        "Dad's Note", "Key Piece 1", "Key Piece 2", "Knife Piece 1", "Knife Piece 2", "Polaroid", "Negative"
-    }
-
-    for unlock_item in all_unlocks:
+    for unlock_item in event_unlocks:
         if unlock_item not in unlock_items:
             event_locations.add((unlock_item, unlock_item + " Acquired"))
 
-    for boss in direct_goal_only_bosses.keys():
-        event_locations.add((boss, boss + " Beaten"))
+    for boss, enabled in required_bosses.items():
+        if enabled:
+            event_locations.add((boss, boss + " Beaten"))
 
     locations = sorted(locations, key=lambda loc: logic_mode_locations[loc][1])
 

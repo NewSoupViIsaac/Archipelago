@@ -50,22 +50,22 @@ class TheBindingOfIsaacRepentanceWorld(World):
     required_prog_item_factor: float = 0.6
 
     def generate_early(self) -> None:
-        self.logic_mode_items = []
+        if self.options.logic_mode:
+            self.logic_mode_items = []
 
-        if self.multiworld.logic_mode[self.player]:
             populatable_regions = base_regions.copy()
 
-            if self.multiworld.furthest_locations[self.player] < 3:
+            if self.options.furthest_locations < 3:
                 populatable_regions = [r for r in populatable_regions if r not in level_3_regions]
 
-            if self.multiworld.furthest_locations[self.player] < 2:
+            if self.options.furthest_locations < 2:
                 populatable_regions = [r for r in populatable_regions if r not in level_2_regions]
 
-            if self.multiworld.furthest_locations[self.player] < 1:
+            if self.options.furthest_locations < 1:
                 populatable_regions = [r for r in populatable_regions if r not in level_1_regions]
 
             self.locations, self.unlock_items, self.event_locations = get_logic_mode_locations(
-                self.multiworld, self.player, populatable_regions
+                self, populatable_regions
             )
 
             return
@@ -132,8 +132,8 @@ class TheBindingOfIsaacRepentanceWorld(World):
         set_rules(self.multiworld, self.player, self.progression_item_count, self.required_prog_item_factor)
 
     def create_regions(self):
-        if self.multiworld.logic_mode[self.player]:
-            create_regions_logic(self.multiworld, self.player, self.locations, self.event_locations)
+        if self.options.logic_mode:
+            create_regions_logic(self, self.locations, self.event_locations)
             return
         create_regions(self.multiworld, self.player, int(self.multiworld.total_locations[self.player].value),
                        self.progression_item_count, self.required_prog_item_factor)

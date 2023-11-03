@@ -1,12 +1,10 @@
 from typing import Dict, Callable, List
-
 from typing_extensions import DefaultDict
 
-from BaseClasses import MultiWorld, Region, CollectionState, Entrance, ItemClassification
-from . import TheBindingOfIsaacRepentanceItem
-from .Locations import unlock_related_locations, logic_mode_locations, TheBindingOfIsaacRepentanceLocation, \
-    get_logic_mode_locations
-from .Utils import determine_enabled_bosses
+from BaseClasses import MultiWorld, Region, CollectionState, Entrance
+from worlds.AutoWorld import World
+
+from .Locations import logic_mode_locations, TheBindingOfIsaacRepentanceLocation
 
 base_regions = [
     "Basement 1",
@@ -97,7 +95,9 @@ def connect(source: Region, target: Region, player: int, condition: Callable[[Co
     connection.connect(target)
 
 
-def connect_all_regions(multiworld: MultiWorld, player: int, regions: Dict[str, Region], ):
+def connect_all_regions(world: World, regions: Dict[str, Region]):
+    player = world.player
+
     # Meh
 
     connect(
@@ -331,7 +331,7 @@ def connect_all_regions(multiworld: MultiWorld, player: int, regions: Dict[str, 
     )
 
 
-def create_regions_logic(multiworld: MultiWorld, player: int, locations: List[str], event_locations: List[str]):
+def create_regions_logic(world: World, locations: List[str], event_locations: List[str]):
     from . import create_region
 
     regions_to_locations = DefaultDict(lambda: [])
@@ -342,29 +342,30 @@ def create_regions_logic(multiworld: MultiWorld, player: int, locations: List[st
         regions_to_locations.setdefault(real_location[1], []).append(location)
 
     for region_name in base_regions:
-        new_region = create_region(multiworld, player, region_name, locations=regions_to_locations[region_name])
+        region_locations = regions_to_locations[region_name]
+        new_region = create_region(world.multiworld, world.player, region_name, locations=region_locations)
         regions_by_name[region_name] = new_region
 
-    starting_region = create_region(multiworld, player, "Menu", None)
+    starting_region = create_region(world.multiworld, world.player, "Menu", None)
 
-    starting_entrance = Entrance(player, "New Run", starting_region)
+    starting_entrance = Entrance(world.player, "New Run", starting_region)
     starting_entrance.connect(regions_by_name["Basement 1"])
 
-    multiworld.regions += [
+    world.multiworld.regions += [
         starting_region
     ]
 
     starting_region.exits.append(starting_entrance)
 
-    connect_all_regions(multiworld, player, regions_by_name)
+    connect_all_regions(world, regions_by_name)
 
     for event_location in event_locations:
         real_location = logic_mode_locations[event_location[0]]
         region = regions_by_name[real_location[1]]
         region.locations.append(
-            TheBindingOfIsaacRepentanceLocation(player, event_location[1], None, region)
+            TheBindingOfIsaacRepentanceLocation(world.player, event_location[1], None, region)
         )
 
-    multiworld.regions += regions_by_name.values()
+    world.multiworld.regions += regions_by_name.values()
 
     return

@@ -1,12 +1,9 @@
 from typing import Dict
+from worlds.AutoWorld import World
 
-from BaseClasses import MultiWorld
 
-
-def determine_enabled_bosses(
-        multiworld: MultiWorld, player: int, goal_only: bool = False, hard_required: bool = False
-) -> Dict[str, bool]:
-    goal = multiworld.goal[player]
+def determine_enabled_bosses(world: World, goal_only: bool = False, hard_required: bool = False) -> Dict[str, bool]:
+    goal = world.options.goal
 
     required_bosses = {
         "Mom": goal == 0,
@@ -23,7 +20,7 @@ def determine_enabled_bosses(
         "Alternate Mom's Heart": goal == 13,
         "Mother": goal == 13,
         "Delirium": goal == 14,
-        "Ultra Greed": False,
+        #  "Ultra Greed": False,
     }
 
     if goal_only:
@@ -34,17 +31,19 @@ def determine_enabled_bosses(
             required_bosses[k] = True
     elif goal == 17 and not hard_required:  # Note Marks
         amt_of_characters = 26  # Assuming that up to 8/34 characters are "disliked"
-        required_note_marks = multiworld.note_marks_amount[player]
+        required_note_marks = world.note_marks_amount
         needed_bosses = required_note_marks / amt_of_characters
 
-        boss_difficulty_order = ["Mom's Heart",
-                                 "Boss Rush",
-                                 "Isaac", "Satan", "Blue Baby", "Lamb",
-                                 "Hush",
-                                 "Mega Satan",
-                                 "Beast", "Mother",
-                                 "Delirium",
-                                 "Ultra Greed"]
+        boss_difficulty_order = [
+            "Mom's Heart",
+            "Boss Rush",
+            "Isaac", "Satan", "Blue Baby", "Lamb",
+            "Hush",
+            "Mega Satan",
+            "Beast", "Mother",
+            "Delirium",
+            #  "Ultra Greed",
+        ]
 
         while sum(required_bosses.values()) < needed_bosses:
             required_bosses[boss_difficulty_order.pop()] = True
