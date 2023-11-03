@@ -220,6 +220,8 @@ def get_logic_mode_locations(world: World, populatable_regions: Set[str]):
 
     if "Lamb" in locations:
         unlock_items.add("Negative")
+        if required_bosses["Lamb"]:
+            unlock_items.add("Polaroid")
     elif required_bosses["Lamb"]:
         event_unlocks.add("Negative")
 
@@ -232,12 +234,20 @@ def get_logic_mode_locations(world: World, populatable_regions: Set[str]):
         event_unlocks.add("Key Piece 1")
         event_unlocks.add("Key Piece 2")
 
+    if "Polaroid" in unlock_items and "Negative" in event_unlocks:
+        event_unlocks.remove("Negative")
+        unlock_items.add("Negative")
+
+    if "Negative" in unlock_items and "Polaroid" in event_unlocks:
+        event_unlocks.remove("Polaroid")
+        unlock_items.add("Polaroid")
+
     for boss in (boss for boss, enabled in direct_goal_only_bosses.items() if enabled):
         if boss in locations:
             locations.remove(boss)
 
     for unlock_item in event_unlocks:
-        if unlock_item not in unlock_items:
+        if unlock_item not in unlock_items and not (unlock_item in {"Polaroid", "Negative"} and either_photo_in):
             event_locations.add((unlock_item, unlock_item + " Acquired"))
 
     for boss, enabled in required_bosses.items():

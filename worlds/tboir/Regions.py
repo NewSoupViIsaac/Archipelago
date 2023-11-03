@@ -68,6 +68,7 @@ level_2_regions = {
 }
 
 level_1_regions = {
+    "Angel Room 2",
     "Blue Womb",
     "Womb 1",
     "Womb 2",
