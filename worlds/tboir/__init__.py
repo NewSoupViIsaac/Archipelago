@@ -161,7 +161,7 @@ class TheBindingOfIsaacRepentanceWorld(World):
         return item
 
     def collect_item(self, state: "CollectionState", item: "Item", remove: bool = False):
-        if item.advancement and item.code and not self.multiworld.logic_mode[self.player]:
+        if item.advancement and item.code and not self.options.logic_mode:
             return "Progression Item"
 
         return super(TheBindingOfIsaacRepentanceWorld, self).collect_item(state, item, remove)
