@@ -68,7 +68,8 @@ class TheBindingOfIsaacRepentanceWorld(World):
                 self, populatable_regions
             )
 
-            return
+            self.options.total_locations.value = min(self.options.total_locations.value, len(self.locations))
+            self.options.required_locations.value = min(self.options.required_locations.value, len(self.locations))
 
         if not self.multiworld.player_name[self.player].isalnum():
             logging.warning(f"The name {self.multiworld.player_name[self.player]} for a TBoI world contains "
@@ -76,6 +77,10 @@ class TheBindingOfIsaacRepentanceWorld(World):
                             f"ingame and may have to edit the games savefile to connect.")
         if self.multiworld.required_locations[self.player].value > self.multiworld.total_locations[self.player].value:
             self.multiworld.total_locations[self.player].value = self.multiworld.required_locations[self.player].value
+
+        if self.options.logic_mode:
+            #  The remaining stuff is not used in logic mode
+            return
 
         self.junk_item_count = round(
             self.multiworld.total_locations[self.player] * (self.multiworld.junk_percentage[self.player] / 100))
@@ -152,7 +157,6 @@ class TheBindingOfIsaacRepentanceWorld(World):
             "noteMarksAmount": self.multiworld.note_marks_amount[self.player].value,
             "noteMarkRequireHardMode": self.multiworld.note_marks_require_hard_mode[self.player].value,
             "splitStartItems": self.multiworld.split_start_items[self.player].value,
-            "logicModeItems": self.logic_mode_items
         }
 
     def create_item(self, name: str) -> Item:
